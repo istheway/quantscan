@@ -1,0 +1,19 @@
+# Compiled binaries
+/quantscan
+/quantscan.exe
+*.out
+
+# GoReleaser output
+/dist/
+
+# Generated reports / CBOMs
+*.pdf
+cbom.json
+cbom-*.json
+coverage.out
+
+# CBOMkit example corpus, fetched locally for manual testing (not vendored)
+/bom-examples/
+
+# Editor / OS
+.DS_Store
