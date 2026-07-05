@@ -101,6 +101,67 @@ func TestTheiaScannerMaxFileSize(t *testing.T) {
 	}
 }
 
+// TestTheiaScannerSkipPlugins confirms --skip-plugins removes a plugin from the
+// scan: skipping "certificates" makes theia miss a certificate it otherwise
+// finds (see TestTheiaScannerDirScan). It restores the global viper "plugins"
+// key afterwards so it does not leak into other in-process scans.
+func TestTheiaScannerSkipPlugins(t *testing.T) {
+	prev := viper.GetStringSlice("plugins")
+	defer viper.Set("plugins", prev)
+
+	dir := t.TempDir()
+	writeSelfSignedCert(t, filepath.Join(dir, "server.pem"))
+
+	s := &TheiaScanner{Mode: TheiaDir, Target: dir, SkipPlugins: []string{"certificates"}}
+	bom, err := s.Scan(context.Background())
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+	if bom.Components != nil {
+		for _, c := range *bom.Components {
+			if c.CryptoProperties != nil && c.CryptoProperties.AssetType == "certificate" {
+				t.Fatal("certificate should have been skipped with certificates plugin disabled")
+			}
+		}
+	}
+}
+
+// TestSelectedPlugins covers the plugin-filtering logic that backs
+// --skip-plugins: no skips means no filtering, a valid skip drops exactly that
+// plugin, and an unknown name is rejected.
+func TestSelectedPlugins(t *testing.T) {
+	t.Run("empty skip returns nil (no filtering)", func(t *testing.T) {
+		got, err := (&TheiaScanner{}).selectedPlugins()
+		if err != nil {
+			t.Fatalf("selectedPlugins: %v", err)
+		}
+		if got != nil {
+			t.Errorf("expected nil, got %v", got)
+		}
+	})
+
+	t.Run("valid skip drops only that plugin", func(t *testing.T) {
+		got, err := (&TheiaScanner{SkipPlugins: []string{"secrets"}}).selectedPlugins()
+		if err != nil {
+			t.Fatalf("selectedPlugins: %v", err)
+		}
+		if len(got) != len(TheiaPlugins())-1 {
+			t.Fatalf("expected %d plugins, got %d: %v", len(TheiaPlugins())-1, len(got), got)
+		}
+		for _, name := range got {
+			if name == "secrets" {
+				t.Errorf("secrets should have been filtered out, got %v", got)
+			}
+		}
+	})
+
+	t.Run("unknown plugin is rejected", func(t *testing.T) {
+		if _, err := (&TheiaScanner{SkipPlugins: []string{"bogus"}}).selectedPlugins(); err == nil {
+			t.Error("expected error for unknown plugin, got nil")
+		}
+	})
+}
+
 // writeSelfSignedCert generates an ECDSA self-signed certificate and writes it
 // as PEM to path.
 func writeSelfSignedCert(t *testing.T, path string) {

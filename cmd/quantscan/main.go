@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -219,6 +220,7 @@ func discoverCmd() *cobra.Command {
 		purls       []string
 		cbomkitURL  string
 		ignore      []string
+		skipPlugins []string
 		out         string
 		outDir      string
 		maxFileSize string
@@ -254,7 +256,7 @@ func discoverCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("invalid --max-file-size %q: %w", maxFileSize, err)
 			}
-			scanners, err := buildScanners(dirs, images, purls, cbomkitURL, ignore, maxBytes)
+			scanners, err := buildScanners(dirs, images, purls, cbomkitURL, ignore, skipPlugins, maxBytes)
 			if err != nil {
 				return err
 			}
@@ -303,6 +305,8 @@ func discoverCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&purls, "purl", nil, "package URL to fetch a source-code CBOM for (repeatable; needs --cbomkit-url)")
 	cmd.Flags().StringVar(&cbomkitURL, "cbomkit-url", "", "base URL of a running CBOMkit service (e.g. http://localhost:8081)")
 	cmd.Flags().StringArrayVar(&ignore, "ignore", nil, "glob pattern excluded from cbomkit-theia scans (repeatable)")
+	cmd.Flags().StringSliceVar(&skipPlugins, "skip-plugins", nil,
+		"cbomkit-theia plugins to skip for --dir/--image scans, e.g. --skip-plugins secrets (choices: "+strings.Join(discover.TheiaPlugins(), ", ")+")")
 	cmd.Flags().StringVarP(&out, "out", "o", "", "explicit output file, or \"-\" for stdout (overrides --out-dir)")
 	cmd.Flags().StringVar(&outDir, "out-dir", "", "directory to save the timestamped cbom-<ts>.json (default: current directory)")
 	cmd.Flags().StringVar(&maxFileSize, "max-file-size", "1MB", "skip files larger than this during --dir/--image scans (e.g. 512KB, 10MB)")
@@ -332,16 +336,16 @@ func cbomOutputPath(out, outDir string) (string, error) {
 
 // buildScanners assembles the ordered list of scanners from the CLI flags,
 // validating cross-flag requirements (a purl needs a CBOMkit service URL).
-func buildScanners(dirs, images, purls []string, cbomkitURL string, ignore []string, maxFileSize int64) ([]discover.Scanner, error) {
+func buildScanners(dirs, images, purls []string, cbomkitURL string, ignore, skipPlugins []string, maxFileSize int64) ([]discover.Scanner, error) {
 	var scanners []discover.Scanner
 	for _, d := range dirs {
 		scanners = append(scanners, &discover.TheiaScanner{
-			Mode: discover.TheiaDir, Target: d, Ignore: ignore, MaxFileSize: maxFileSize,
+			Mode: discover.TheiaDir, Target: d, Ignore: ignore, MaxFileSize: maxFileSize, SkipPlugins: skipPlugins,
 		})
 	}
 	for _, img := range images {
 		scanners = append(scanners, &discover.TheiaScanner{
-			Mode: discover.TheiaImage, Target: img, Ignore: ignore, MaxFileSize: maxFileSize,
+			Mode: discover.TheiaImage, Target: img, Ignore: ignore, MaxFileSize: maxFileSize, SkipPlugins: skipPlugins,
 		})
 	}
 	if len(purls) > 0 {

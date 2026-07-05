@@ -43,6 +43,43 @@ type TheiaScanner struct {
 	Target      string    // directory path or image reference
 	Ignore      []string  // glob patterns excluded from the scan
 	MaxFileSize int64     // per-file scan limit in bytes; 0 keeps theia's default (1 MiB)
+	SkipPlugins []string  // plugin names to exclude from the scan (e.g. "secrets"); empty runs all
+}
+
+// TheiaPlugins returns the names of every cbomkit-theia plugin QuantScan can
+// run (e.g. "certificates", "secrets"), for validating --skip-plugins.
+func TheiaPlugins() []string {
+	return theia.GetAllPluginNames()
+}
+
+// selectedPlugins returns theia's full plugin list minus SkipPlugins, and an
+// error if any skipped name is not a real plugin. A nil result means no
+// filtering is needed (nothing skipped).
+func (t *TheiaScanner) selectedPlugins() ([]string, error) {
+	if len(t.SkipPlugins) == 0 {
+		return nil, nil
+	}
+	skip := make(map[string]bool, len(t.SkipPlugins))
+	for _, name := range t.SkipPlugins {
+		skip[name] = true
+	}
+	all := theia.GetAllPluginNames()
+	valid := make(map[string]bool, len(all))
+	for _, name := range all {
+		valid[name] = true
+	}
+	for name := range skip {
+		if !valid[name] {
+			return nil, fmt.Errorf("unknown cbomkit-theia plugin %q; valid plugins: %v", name, all)
+		}
+	}
+	kept := make([]string, 0, len(all))
+	for _, name := range all {
+		if !skip[name] {
+			kept = append(kept, name)
+		}
+	}
+	return kept, nil
 }
 
 // Name implements Scanner.
@@ -58,6 +95,16 @@ func (t *TheiaScanner) Scan(ctx context.Context) (*cdx.BOM, error) {
 	// keys.max_file_size viper key (default 1 MiB when unset/<=0).
 	if t.MaxFileSize > 0 {
 		viper.Set("keys.max_file_size", t.MaxFileSize)
+	}
+
+	// theia reads its plugin list from the viper "plugins" key (seeded to every
+	// plugin by initTheia). Narrow it when the caller asked to skip some.
+	plugins, err := t.selectedPlugins()
+	if err != nil {
+		return nil, err
+	}
+	if plugins != nil {
+		viper.Set("plugins", plugins)
 	}
 
 	fs, cleanup, err := t.filesystem()
