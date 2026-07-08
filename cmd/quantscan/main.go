@@ -68,8 +68,8 @@ OUTPUT FORMATS (scan -f)
   json   Machine-readable summary for CI / dashboards
 
 PREREQUISITES
-  discover --dir/--image   cbomkit-theia binary
-                           (go install github.com/cbomkit/cbomkit-theia@latest)
+  discover --dir           nothing external (cbomkit-theia is vendored, runs in-process)
+  discover --image         a running Docker daemon (to pull/extract the image)
   discover --purl          a running CBOMkit service (--cbomkit-url)
   scan -f pdf              a Chromium/Chrome binary on PATH (or --chrome)
 
