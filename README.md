@@ -169,6 +169,9 @@ quantscan scan cbom.json -f pdf --org "Acme Corp" -o report.pdf
 
 ## Command reference
 
+Global flags work on any command: `-h, --help` prints usage, and `-v, --version`
+(e.g. `quantscan --version`) reports the build version.
+
 ### `discover`
 
 ```sh
@@ -183,6 +186,7 @@ quantscan discover [flags]
 | `--cbomkit-url <url>` | Base URL of a running CBOMkit service, e.g. `http://localhost:8081`. |
 | `--ignore <glob>` | Glob excluded from the filesystem scan. Repeatable. |
 | `--max-file-size <size>` | Skip files larger than this during `--dir`/`--image` scans, e.g. `512KB`, `10MB` (default: `1MB`). |
+| `--skip-plugins <names>` | Comma-separated cbomkit-theia plugins to skip during `--dir`/`--image` scans. Choices: `certificates`, `javasecurity`, `secrets`, `opensslconf`, `problematicca`. E.g. `--skip-plugins secrets`. |
 | `--out-dir <dir>` | Directory for the auto-named `cbom-<timestamp>.json` (default: current directory; created if missing). |
 | `-o, --out <file>` | Explicit output file, or `-` for stdout (overrides `--out-dir`). |
 
@@ -201,7 +205,14 @@ quantscan discover --dir . --out-dir ./cboms
 # Explicit filename, plus a source-code scan from a CBOMkit service
 quantscan discover --dir . --cbomkit-url http://localhost:8081 \
   --purl pkg:github/myorg/myapp -o cbom.json
+
+# Scan a directory but skip theia's secret detector
+quantscan discover --dir . --skip-plugins secrets
 ```
+
+`--ignore`, `--max-file-size`, and `--skip-plugins` tune the in-process
+cbomkit-theia scan (`--dir`/`--image`) only; they have no effect on `--purl`,
+which is analyzed server-side by the CBOMkit service.
 
 ### `scan`
 
