@@ -35,6 +35,10 @@ archives:
       {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
     formats:
       - tar.gz
+    files:
+      - LICENSE
+      - THIRD_PARTY_NOTICES.txt
+      - README.md
     format_overrides:
       - goos: windows
         formats:

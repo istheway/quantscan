@@ -285,3 +285,14 @@ Findings derive from an automated CBOM scan and support SOC 2 / HIPAA / PCI DSS
 evidence collection. This artifact does not constitute a formal attestation.
 CNSA 2.0 dates reflect published guidance as of mid-2026 and are centralized in
 `internal/compliance` for review as standards evolve.
+
+## License
+
+QuantScan is released under the [MIT License](LICENSE) — free to use, modify,
+and redistribute, including commercially.
+
+It statically links third-party open-source Go modules, each under its own
+permissive license (MIT, Apache-2.0, BSD, MPL-2.0, ISC, CC0). Their full
+license texts and required attributions are reproduced in
+[`THIRD_PARTY_NOTICES.txt`](THIRD_PARTY_NOTICES.txt), which ships with every
+release archive.
