@@ -18,3 +18,4 @@ coverage.out
 # Editor / OS
 .DS_Store
 .vscode/
+.claude/
